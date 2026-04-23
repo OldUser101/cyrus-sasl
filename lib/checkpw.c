@@ -122,7 +122,6 @@ static int _sasl_make_plain_secret(const char *salt,
 				   const char *passwd, size_t passlen,
 				   sasl_secret_t **secret)
 {
-    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     unsigned sec_len = 16 + 1 + 16; /* salt + "\0" + hash */
 
     *secret = (sasl_secret_t *) sasl_ALLOC(sizeof(sasl_secret_t) +
@@ -131,6 +130,7 @@ static int _sasl_make_plain_secret(const char *salt,
 	return SASL_NOMEM;
     }
 
+    EVP_MD_CTX * const ctx = EVP_MD_CTX_new();
     EVP_DigestInit(ctx, EVP_md5());
     EVP_DigestUpdate(ctx, (const unsigned char *) salt, 16);
     EVP_DigestUpdate(ctx, (const unsigned char *) "sasldb", 6);
@@ -138,6 +138,7 @@ static int _sasl_make_plain_secret(const char *salt,
     memcpy((*secret)->data, salt, 16);
     (*secret)->data[16] = '\0';
     EVP_DigestFinal(ctx, (*secret)->data + 17, NULL);
+    EVP_MD_CTX_free( ctx );
     (*secret)->len = sec_len;
     
     return SASL_OK;
@@ -362,7 +363,6 @@ int _sasl_auxprop_verify_apop(sasl_conn_t *conn,
     const char *password_request[] = { SASL_AUX_PASSWORD, NULL };
     struct propval auxprop_values[2];
     sasl_server_conn_t *sconn = (sasl_server_conn_t *)conn;
-    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     int i;
 
     if (!conn || !userstr || !challenge || !response)
@@ -385,11 +385,13 @@ int _sasl_auxprop_verify_apop(sasl_conn_t *conn,
 	goto done;
     }
     
+    EVP_MD_CTX * const ctx = EVP_MD_CTX_new();
     EVP_DigestInit(ctx, EVP_md5());
     EVP_DigestUpdate(ctx, (const unsigned char *) challenge, strlen(challenge));
     EVP_DigestUpdate(ctx, (const unsigned char *) auxprop_values[0].values[0],
 		    strlen(auxprop_values[0].values[0]));
     EVP_DigestFinal(ctx, digest, NULL);
+    EVP_MD_CTX_free( ctx );
 
     /* erase the plaintext password */
     sconn->sparams->utils->prop_erase(sconn->sparams->propctx,
