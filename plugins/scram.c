@@ -700,7 +700,13 @@ scram_server_mech_step1(server_context_t *text,
     text->gs2_header[text->gs2_header_length - 1] = ',';
     text->gs2_header[text->gs2_header_length] = 0;
 
-
+    if ((p - inbuf) >= (ptrdiff_t)clientinlen) {
+	sparams->utils->seterror(sparams->utils->conn, 0,
+	                         "Truncated %s client-first-message",
+	                         scram_sasl_mech);
+	result = SASL_BADPROT;
+	goto cleanup;
+    }
 
     if (p[1] != '=') {
 	sparams->utils->seterror(sparams->utils->conn, 0,
