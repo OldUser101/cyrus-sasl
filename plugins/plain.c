@@ -124,7 +124,13 @@ static int plain_server_mech_step(void *conn_context __attribute__((unused)),
     while ((lup < clientinlen) && (clientin[lup] != 0)) ++lup;
     
     password_len = (unsigned) (clientin + lup - password);
-    
+
+    /* empty passwords must be rejected */
+    if (password_len == 0) {
+	SETERROR(params->utils, "Empty password in PLAIN authentication\n");
+	return SASL_BADPROT;
+    }
+
     if (lup != clientinlen) {
 	SETERROR(params->utils,
 		 "Got more data than we were expecting in the PLAIN plugin\n");
