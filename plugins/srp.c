@@ -2016,6 +2016,7 @@ static int srp_server_mech_step2(context_t *text,
     unsigned char M2[EVP_MAX_MD_SIZE];
     unsigned int M2len;
     unsigned char sIV[SRP_MAXBLOCKSIZE];
+    BIGNUM *rem = NULL; BN_CTX *ctx = NULL;
     
     /* Expect:
      *
@@ -2042,6 +2043,15 @@ static int srp_server_mech_step2(context_t *text,
 	result = SASL_BADPROT;
 	goto cleanup;
     }
+
+    rem = BN_new(); ctx = BN_CTX_new();
+    BN_mod(rem, text->A, text->N, ctx);
+    if (BN_is_zero(rem) || BN_cmp(text->A, text->N) >= 0) {
+	BN_free(rem); BN_CTX_free(ctx);
+	SETERROR(params->utils, "Illegal value for 'A'\n");
+	result = SASL_BADPROT; goto cleanup;
+    }
+    BN_free(rem); BN_CTX_free(ctx);
 
     /* parse client options */
     result = ParseOptions(params->utils, text->client_options, &client_opts, 1);
